@@ -6,8 +6,17 @@
     "hazard",
     "weight",
     "reconcile",
-    "archive"
+    "archive",
+    "detention"
   ],
+  "detention": {
+    "free_days": 7,
+    "daily_rate": "150.00",
+    "basis_tolerance_hours": 48,
+    "settlement": "explainable",
+    "shares_file": "detention_shares.csv",
+    "events_file": "detention_events.csv"
+  },
   "packages": {
     "carton": "1",
     "pallet": "10",

@@ -10,7 +10,8 @@
     "危险品检查",
     "净毛重核验",
     "报关对账",
-    "版本封存"
+    "版本封存",
+    "超期用箱"
   ],
   "rule": "主提单与分提单拆并形成有向无环关系，件数和净毛重逐层守恒",
   "lane": "L3",
@@ -29,7 +30,8 @@
     "hazard",
     "weight",
     "reconcile",
-    "archive"
+    "archive",
+    "detention"
   ],
   "labels": {
     "id": "提单编号",
@@ -63,6 +65,26 @@
     "graph_errors": "关系错误",
     "weight_errors": "重量差异",
     "child": "子单号",
-    "classes": "危险类组合"
+    "classes": "危险类组合",
+    "container": "箱号",
+    "event": "节点",
+    "event_time": "节点时间",
+    "receipt_id": "回执编号",
+    "actor": "记录方",
+    "closed": "回执闭合",
+    "master_bill": "承担主单",
+    "share_pieces": "拆并件数",
+    "basis": "起算依据",
+    "basis_detail": "依据说明",
+    "port_days": "港口占用天",
+    "carrier_days": "承运人计时天",
+    "free_days": "免费用箱天",
+    "overdue_days": "超期天数",
+    "container_fee": "箱费用合计",
+    "bill_fee": "主单承担金额",
+    "entry_status": "责任状态",
+    "sealable": "可随舱单封存",
+    "block_codes": "阻断原因码",
+    "generation": "责任账版次"
   }
 }

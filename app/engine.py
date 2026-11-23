@@ -6,7 +6,15 @@ from app.config import ROOT, MODULES, MAX_BYTES
 from app.errors import BusinessError
 from app.manifest import digest, make_manifest
 
-def evaluate(payload=None, until=7, snapshot=None):
+def deep_merge(base, patch):
+    for key,value in patch.items():
+        if isinstance(value,dict) and isinstance(base.get(key),dict):
+            deep_merge(base[key],value)
+        else:
+            base[key]=value
+    return base
+
+def evaluate(payload=None, until=8, snapshot=None):
     payload=payload or {}
     dataset=payload.get('dataset','dirty')
     if dataset not in {'dirty','clean','legacy'}: raise BusinessError('BAD_DATASET','样例名称无效')
@@ -14,7 +22,7 @@ def evaluate(payload=None, until=7, snapshot=None):
     raw=(base64.b64decode(snapshot['bytes_b64'],validate=True) if snapshot is not None else (str(payload['csv_text']).encode() if 'csv_text' in payload else (ROOT/'sample_data'/f'{dataset}.csv').read_bytes()))
     if len(raw)>MAX_BYTES: raise BusinessError('TOO_LARGE','文件超过2MB',413)
     context=deepcopy(snapshot['context']) if snapshot is not None else json.loads((ROOT/'sample_data/context.json').read_text())
-    context.update(deepcopy(payload.get('overrides',{})))
+    deep_merge(context,deepcopy(payload.get('overrides',{})))
     start=time.perf_counter()
     state={'raw_bytes':raw,'context':context,'records':[],'quarantine':[], 'counts':{},'views':{},'source':dataset}
     for index,key in enumerate(MODULES,1):

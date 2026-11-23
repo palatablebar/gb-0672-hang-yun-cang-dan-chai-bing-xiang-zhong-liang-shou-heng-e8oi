@@ -13,6 +13,7 @@
 | M5 净毛重核验 | 执行并复核净毛重核验 | `POST /api/weight` | `app/modules/weight/rules.py` | `tests/test_weight.py` |
 | M6 报关对账 | 执行并复核报关对账 | `POST /api/reconcile` | `app/modules/reconcile/rules.py` | `tests/test_reconcile.py` |
 | M7 版本封存 | 执行并复核版本封存 | `POST /api/archive` | `app/modules/archive/rules.py` | `tests/test_archive.py` |
+| M8 超期用箱 | 生成责任账、回执补证、增量重算 | `POST /api/detention` | `app/modules/detention/rules.py` `app/detention_store.py` | `tests/test_detention.py` `tests/test_detention_store.py` `tests/test_detention_api.py` |
 
 ## 陷阱登记
 
@@ -29,6 +30,13 @@
 | TRAP-06 | 全角千分位 | 静默错算或证据丢失 | 以可复核规则显式处理 | `app/modules/packaging/rules.py` | `tests/test_packaging.py::test_fullwidth_decimal` |
 | TRAP-20 | 拆并依赖环 | 静默错算或证据丢失 | 以可复核规则显式处理 | `app/modules/grouping/rules.py` | `tests/test_grouping.py::test_cycle_real` |
 | TRAP-21 | 缺失父级 | 静默错算或证据丢失 | 以可复核规则显式处理 | `app/modules/grouping/rules.py` | `tests/test_grouping.py::test_missing_parent_real` |
+| TRAP-31 | 两口径时点错位 | 直接按港口时间向承运人计费 | 承运人提空/还箱回执为正式依据，港口口径容差交叉解释 | `app/modules/detention/rules.py` | `tests/test_detention.py::test_carrier_basis_overdue_and_fee` |
+| TRAP-32 | 未闭合回执定责 | 争议箱写成正式责任 | 三闸门校验，未闭合只入争议暂记且不可封存 | `app/modules/detention/rules.py` | `tests/test_detention.py::test_open_return_receipt_blocks_formal` |
+| TRAP-33 | 同箱重复计费 | 多主单各算一遍导致总额翻倍 | 箱费用只计一次，最大余数法分摊且合计守恒 | `app/modules/detention/rules.py` | `tests/test_detention.py::test_fee_counted_once_and_largest_remainder` |
+| TRAP-34 | 补证重复入账 | 重试回执产生新费用 | receipt_id 幂等，同内容重试不新增版次 | `app/detention_store.py` | `tests/test_detention_store.py::test_idempotent_same_receipt_no_new_fee` |
+| TRAP-35 | 全量重算覆盖已定责箱 | 箱期变化冲掉无关注释与金额 | 只重建受影响箱，其余箱原样复制上一版 | `app/detention_store.py` | `tests/test_detention_store.py::test_receipt_close_only_recomputes_affected_box` |
+| TRAP-36 | 生成失败污染责任账 | 半成品覆盖旧版 | 单事务写入，异常回滚保持旧版 active | `app/detention_store.py` | `tests/test_detention_store.py::test_build_failure_restores_previous_ledger` |
+| TRAP-37 | 补证删除历史 | 新关系物理覆盖旧映射 | 零件数墓碑 + 证据只追加 | `app/detention_store.py` | `tests/test_detention_store.py::test_share_relation_repair_uses_tombstone` |
 
 ## 对账规则
 

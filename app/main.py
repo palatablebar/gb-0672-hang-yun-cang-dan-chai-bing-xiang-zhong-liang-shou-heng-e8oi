@@ -6,8 +6,9 @@ from fastapi.staticfiles import StaticFiles
 from app.config import ROOT, META, MODULES, DB_PATH
 from app.errors import BusinessError
 from app.engine import evaluate
-from app import store
+from app import store, detention_store
 from app.archive import serialize
+from app.errors import BusinessError
 
 @asynccontextmanager
 async def lifespan(app):
@@ -47,6 +48,12 @@ def review(run_id:str,payload:dict=Body(...)):
 @app.get('/api/export/{run_id}')
 def export(run_id:str):
     result=store.get(DB_PATH,run_id)
-    return Response(serialize(result),media_type='application/zip',headers={'Content-Disposition':f'attachment; filename="{run_id}.zip"'})
+    ledger=None
+    try:
+        candidate=detention_store.ledger(DB_PATH,run_id)
+        if candidate.get('generation',0)>0: ledger=candidate
+    except BusinessError:
+        pass
+    return Response(serialize(result,ledger),media_type='application/zip',headers={'Content-Disposition':f'attachment; filename="{run_id}.zip"'})
 for key in MODULES:
     app.include_router(import_module(f'app.modules.{key}.handler').router)

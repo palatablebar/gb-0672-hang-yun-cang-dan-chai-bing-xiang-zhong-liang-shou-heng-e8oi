@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="sheet-grid detention-grid">
+  <section class="panel index">
+    <h2>结算口径<sup>1</sup></h2>
+    <details open><summary>起算依据</summary>
+      <div class="branch">港口：进场 GATE_IN → 离场 GATE_OUT<small>免费用箱 {{ state.context.detention.free_days }} 天</small></div>
+      <div class="branch">承运人：提空 PICKUP → 还箱 RETURN<small>回执闭合才起算正式责任</small></div>
+      <div class="branch">可解释容差 {{ state.context.detention.basis_tolerance_hours//24 }} 日<small>超容差列为 BASIS_UNRECONCILED</small></div>
+    </details>
+    <details open><summary>结算策略</summary>
+      <div class="branch">explainable（当前默认）<small>只结算双方可解释箱，争议箱暂记</small></div>
+      <div class="branch">whole_container<small>整柜等待回执闭合，任一争议全柜暂记</small></div>
+      <div class="branch">日费率 {{ state.context.detention.daily_rate }}<small>同箱费用只计一次，最大余数法分摊主单</small></div>
+    </details>
+    <details open><summary>正式责任三闸门</summary>
+      <div class="branch">① 拆并关系闭合<small>箱↔主单映射均有效</small></div>
+      <div class="branch">② 还箱回执闭合<small>RETURN.closed=yes</small></div>
+      <div class="branch">③ 两口径可互相解释<small>容差内时点差异留痕</small></div>
+    </details>
+  </section>
+
+  <section class="panel data-panel">
+    <h2>超期用箱责任账<sup>2</sup><small id="ledger-meta">草案（批次视图）</small></h2>
+    <div class="table-scroll">
+      <table id="ledger-table">
+        <thead><tr>
+          <th>箱号</th><th>责任状态</th><th>起算依据</th><th>超期天数</th><th>箱费用合计</th>
+          <th>主单承担金额</th><th>可封存</th><th>阻断原因码</th><th>依据说明</th>
+        </tr></thead>
+        <tbody>
+        {% for e in view.rows %}
+          <tr class="ledger-row" data-container="{{ e.container }}">
+            <td>{{ e.container }}</td>
+            <td class="{% if e.entry_status=='争议暂记' %}fail{% else %}ok{% endif %}">{{ e.entry_status }}</td>
+            <td>{{ '承运人口径' if e.basis=='carrier' else '暂不起算' }}</td>
+            <td class="num">{{ e.overdue_days if e.overdue_days is not none else '—' }}</td>
+            <td class="num">{{ e.container_fee }}</td>
+            <td>{% for b in e.allocations %}<div class="alloc">{{ b.master_bill }}：<b>{{ b.bill_fee }}</b><small>（{{ b.share_pieces }}件）</small></div>{% endfor %}</td>
+            <td class="{% if e.sealable %}ok{% else %}fail{% endif %}">{{ '可封存' if e.sealable else '不可封存' }}</td>
+            <td class="fail">{{ e.block_codes|join(' / ') if e.block_codes else '—' }}</td>
+            <td title="{{ e.basis_detail }}">{{ e.basis_detail[:38] }}…</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="toolstrip">
+      <button id="open-ledger">生成正式责任账</button>
+      <button id="refresh-ledger">读取正式账</button>
+      <output id="detention-message" aria-live="polite"></output>
+    </div>
+  </section>
+
+  <div class="right-column">
+    <section class="panel">
+      <h2>补证：还箱/提空回执<sup>3</sup></h2>
+      <div class="form-grid">
+        <input id="rcp-id" placeholder="回执编号 RCP-xxxx-R">
+        <input id="rcp-box" placeholder="箱号 C00x">
+        <select id="rcp-event"><option>RETURN</option><option>PICKUP</option><option>GATE_IN</option><option>GATE_OUT</option></select>
+        <input id="rcp-time" placeholder="2026-11-12T10:00:00+08:00">
+        <select id="rcp-closed"><option value="yes">闭合 yes</option><option value="no">未闭合 no</option></select>
+        <button id="submit-receipt">提交回执（幂等）</button>
+      </div>
+      <small>同编号同内容重复提交不新增版次、不新增费用；生成失败自动回滚旧版。</small>
+    </section>
+    <section class="panel">
+      <h2>补证：上游拆并关系</h2>
+      <div class="form-grid">
+        <input id="sh-box" placeholder="箱号 C00x">
+        <input id="sh-bill" placeholder="主单号 M00x">
+        <input id="sh-pieces" placeholder="拆并件数" type="number">
+        <button id="submit-share">提交关系变更</button>
+      </div>
+      <small>只重算受影响箱，其余箱沿用上一版；证据只追加不删除。</small>
+    </section>
+    <section class="panel stamps">
+      <h2>版次与封存</h2>
+      <div id="generation-list" class="checksum">尚未生成正式账。</div>
+      <button id="recompute-all">整批重算（保留证据）</button>
+      <div class="stamp" id="seal-stamp">草案</div>
+      <a href="/api/export/{{ state.manifest.run_id }}">下载舱单封存件（正式责任箱随附）</a>
+    </section>
+  </div>
+</div>
+<script src="/static/detention.js" defer></script>
+{% endblock %}
